@@ -82,9 +82,18 @@ def main():
                 for dataset in scripts:
                     print("\nDataset:  {}".format(dataset.name))
                     print("Citation:   {}".format(dataset.citation))
-                    print("Description:   {}\n".format(dataset.description))
-
             return
+
+        elif args.command == 'description':
+            if args.dataset is None:
+                print ("No dataset specified")
+            else:
+                scripts = name_matches(script_list, args.dataset)
+                for dataset in scripts:
+                    print("\nDataset:  {}".format(dataset.name))
+                    print("Description:   {}\n".format(dataset.description))
+            return
+
 
         elif args.command == 'license':
             dataset_license = license(args.dataset)
