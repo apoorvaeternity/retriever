@@ -12,7 +12,7 @@ from retriever.lib.engine_tools import json2csv, sort_csv
 
 
 class engine(Engine):
-    """Engine instance for writing data to a CSV file."""
+    """Engine instance for writing data to a JSON file."""
 
     name = "JSON"
     abbreviation = "json"
@@ -34,6 +34,9 @@ class engine(Engine):
         ("data_dir",
          "Install directory",
          DATA_DIR),
+        ("indent",
+         "Set indentation for json file",
+         2)
     ]
     table_names = []
 
@@ -110,10 +113,12 @@ class engine(Engine):
         else:
             newrows = values
         json_dumps = []
+        indentation = int(self.opts["indent"])
         for line_data in newrows:
             tuples = (zip(keys, line_data))
             write_data = OrderedDict(tuples)
-            json_dumps.append(json.dumps(write_data, ensure_ascii=False) + ",")
+            json_dumps.append(json.dumps(write_data, ensure_ascii=False,
+                                         indent=indentation) + ",")
         return json_dumps
 
     def table_exists(self, dbname, tablename):
