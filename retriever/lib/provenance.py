@@ -1,21 +1,26 @@
 import os
+import subprocess
+import sys
 from datetime import datetime, timezone
 from zipfile import ZipFile
-from pip._internal.operations.freeze import freeze
 
 from retriever import datasets
 from retriever.lib.defaults import HOME_DIR, VERSION
 
 
 def commit_info():
+    """
+    Generate info for a particular commit.
+    """
     info = {}
-    info['packages'] = {'retriever': VERSION}
+    info['packages'] = {'retriever': VERSION[1:]}
     info['time'] = datetime.now(timezone.utc).strftime("%m/%d/%Y, %H:%M:%S")
-
-    for package in freeze(exclude_editable=True):
-        print(package)
-        package_name, version = package.split('==')
-        info['packages'][package_name] = version
+    packages = subprocess.check_output([sys.executable, '-m', 'pip',
+                                        'freeze', '--exclude-editable']).decode("utf-8").split('\n')
+    for package in packages:
+        if package:
+            package_name, version = package.split('==')
+            info['packages'][package_name] = version
     return info
 
 
@@ -42,5 +47,5 @@ def commit(dataset, path=None):
 if __name__ == '__main__':
     print(commit_info())
     # for dataset in datasets():
-    #     if dataset.name == 'abalone-age':
+    #     if dataset.name == 'airports':
     #         print(commit(dataset, path='/home/apoorva/Desktop'))
