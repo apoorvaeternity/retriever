@@ -47,14 +47,16 @@ def commit(dataset, path=None, force_download=False):
     elif dataset.name in os.listdir(raw_dir):
         data_exists = True
     if data_exists:
-        for file in os.listdir(os.path.join(raw_dir, dataset.name)):
-            paths_to_zip['raw_data'].append(os.path.join(raw_dir, dataset.name, file))
-
+        for root, directory, files in os.walk(os.path.join(raw_dir, dataset.name)):
+            for file in files:
+                paths_to_zip['raw_data'].append(os.path.join(root, file))
+        
         with ZipFile(os.path.join(path, dataset.name), 'w') as zipped:
             zipped.write(paths_to_zip['script'],
                          os.path.join('script', os.path.basename(paths_to_zip['script'])))
             for data_file in paths_to_zip['raw_data']:
-                zipped.write(data_file, os.path.join('raw_data', os.path.basename(data_file)))
+                zipped.write(data_file, os.path.join(data_file.lstrip(raw_dir).rstrip(os.path.basename(data_file)),
+                                                     os.path.basename(data_file)))
 
 
 if __name__ == '__main__':
