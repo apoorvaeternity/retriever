@@ -30,7 +30,7 @@ def commit_info():
     return info
 
 
-def commit(dataset, path=None, force_download=False):
+def commit(dataset, path=None, force_download=False, quiet=False):
     """
     Commit dataset to a zipped file.
     """
@@ -40,7 +40,8 @@ def commit(dataset, path=None, force_download=False):
     raw_dir = os.path.join(HOME_DIR, 'raw_data')
     data_exists = False
     if dataset.name not in os.listdir(raw_dir) and force_download:
-        print("Dataset not in downloaded datasets. Downloading it.")
+        if not quiet:
+            print("Dataset not in downloaded datasets. Downloading it.")
         download(dataset.name)
         data_exists = True
 
@@ -50,17 +51,20 @@ def commit(dataset, path=None, force_download=False):
         for root, directory, files in os.walk(os.path.join(raw_dir, dataset.name)):
             for file in files:
                 paths_to_zip['raw_data'].append(os.path.join(root, file))
-        
+
         with ZipFile(os.path.join(path, dataset.name), 'w') as zipped:
             zipped.write(paths_to_zip['script'],
                          os.path.join('script', os.path.basename(paths_to_zip['script'])))
             for data_file in paths_to_zip['raw_data']:
                 zipped.write(data_file, os.path.join(data_file.lstrip(raw_dir).rstrip(os.path.basename(data_file)),
                                                      os.path.basename(data_file)))
+    else:
+        if not quiet:
+            print("Dataset unavailable in downloaded datasets.")
 
 
 if __name__ == '__main__':
     print(commit_info())
     for dataset in datasets():
         if dataset.name == 'gentry-forest-transects':
-            print(commit(dataset, path='/home/apoorva/Desktop', force_download=True))
+            print(commit(dataset, path='/home/apoorva/Desktop', force_download=True, quiet=True))
