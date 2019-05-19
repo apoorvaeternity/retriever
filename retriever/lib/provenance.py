@@ -10,7 +10,6 @@ from retriever import datasets, download
 from retriever.lib.defaults import HOME_DIR, VERSION
 from retriever.lib.engine_tools import getmd5
 
-
 def package_details():
     details = {}
     details['retriever'] = VERSION[1:]
@@ -31,6 +30,7 @@ def commit_info(dataset):
     info['packages'] = package_details()
     info['time'] = datetime.now(timezone.utc).strftime("%m/%d/%Y, %H:%M:%S")
     info['md5'] = getmd5(os.path.join(HOME_DIR, 'raw_data', dataset.name), 'dir')
+    info['version'] = dataset.version
     return info
 
 
