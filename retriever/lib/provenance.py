@@ -6,9 +6,11 @@ from datetime import datetime, timezone
 from tempfile import NamedTemporaryFile
 from zipfile import ZipFile
 
-from retriever import datasets, download
+from retriever import datasets
+from retriever.engines import choose_engine
 from retriever.lib.defaults import HOME_DIR, VERSION
 from retriever.lib.engine_tools import getmd5
+
 
 def package_details():
     details = {}
@@ -29,7 +31,6 @@ def commit_info(dataset):
     info = {}
     info['packages'] = package_details()
     info['time'] = datetime.now(timezone.utc).strftime("%m/%d/%Y, %H:%M:%S")
-    info['md5'] = getmd5(os.path.join(HOME_DIR, 'raw_data', dataset.name), 'dir')
     info['version'] = dataset.version
     return info
 
@@ -43,10 +44,14 @@ def commit(dataset, path=None, force_download=False, quiet=False):
     paths_to_zip['raw_data'] = []
     raw_dir = os.path.join(HOME_DIR, 'raw_data')
     data_exists = False
-    if dataset.name not in os.listdir(raw_dir) and force_download:
+    if dataset.name not in os.listdir(raw_dir) or force_download:
         if not quiet:
             print("Dataset not in downloaded datasets. Downloading it.")
-        download(dataset.name)
+        if dataset._file.endswith('.py'):
+            dataset.download(engine=choose_engine({'command': 'download', 'path': './', 'sub_dir': ""}))
+        else:
+            dataset.download(engine=choose_engine({'command': 'download', 'path': './',
+                                                   'sub_dir': ""}, choice=False))
         data_exists = True
 
     elif dataset.name in os.listdir(raw_dir):
@@ -56,12 +61,13 @@ def commit(dataset, path=None, force_download=False, quiet=False):
             for file in files:
                 paths_to_zip['raw_data'].append(os.path.join(root, file))
         info = commit_info(dataset)
+        if os.path.exists(os.path.join(HOME_DIR, 'raw_data', dataset.name)):
+            info['md5'] = getmd5(os.path.join(HOME_DIR, 'raw_data', dataset.name), 'dir')
         with ZipFile(os.path.join(path, '{}-{}'.format(dataset.name, info['md5'][:7])), 'w') as zipped:
             zipped.write(paths_to_zip['script'],
                          os.path.join('script', os.path.basename(paths_to_zip['script'])))
             for data_file in paths_to_zip['raw_data']:
-                zipped.write(data_file, os.path.join(data_file.lstrip(raw_dir).rstrip(os.path.basename(data_file)),
-                                                     os.path.basename(data_file)))
+                zipped.write(data_file, data_file.split(raw_dir)[1])
             metadata_temp_file = NamedTemporaryFile()
             with open(os.path.abspath(metadata_temp_file.name), 'w') as json_file:
                 json.dump(info, json_file, sort_keys=True, indent=4)
@@ -71,12 +77,13 @@ def commit(dataset, path=None, force_download=False, quiet=False):
 
     else:
         if not quiet:
-            print("Dataset unavailable in downloaded datasets.")
+            print("Dataset unavailable in downloaded datasets.\n"
+                  "To commit the dataset either download it or enable force download.")
 
 
 if __name__ == '__main__':
 
     for dataset in datasets():
-        if dataset.name == 'gentry-forest-transects':
+        if dataset.name == 'forest-plots-wghats':
             print(commit_info(dataset))
-            print(commit(dataset, path='/home/apoorva/Desktop', force_download=True, quiet=True))
+            print(commit(dataset, path='/home/apoorva/Desktop', force_download=True, quiet=False))
