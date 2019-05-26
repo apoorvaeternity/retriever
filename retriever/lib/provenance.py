@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 from datetime import datetime, timezone
+from importlib import util
 from tempfile import NamedTemporaryFile, mkdtemp
 from zipfile import ZipFile
 
@@ -12,7 +13,10 @@ from retriever.lib.defaults import HOME_DIR, VERSION
 from retriever.lib.engine_tools import getmd5
 from retriever.lib.load_json import read_json
 from retriever.engines import engine_list
-sqlite_engine = [eng for eng in engine_list if eng.name == 'CSV'][0]
+
+sqlite_engine = [eng for eng in engine_list if eng.name == 'SQLite'][0]
+
+
 def package_details():
     details = {}
     details['retriever'] = VERSION[1:]
@@ -64,11 +68,12 @@ def commit(dataset, path=None, force_download=False, quiet=False):
                 paths_to_zip['raw_data'].append(os.path.join(root, file))
 
         info = commit_info(dataset)
-        info['name'] = dataset.name
+        info['script_name'] = os.path.basename(dataset._file)
+
         if os.path.exists(os.path.join(HOME_DIR, 'raw_data', dataset.name)):
             info['md5'] = getmd5(os.path.join(HOME_DIR, 'raw_data', dataset.name), 'dir')
 
-        with ZipFile(os.path.join(path, '{}-{}'.format(dataset.name, info['md5'][:7])), 'w') as zipped:
+        with ZipFile(os.path.join(path, '{}-{}.zip'.format(dataset.name, info['md5'][:7])), 'w') as zipped:
             zipped.write(paths_to_zip['script'],
                          os.path.join('script', os.path.basename(paths_to_zip['script'])))
 
@@ -93,26 +98,31 @@ def install_committed(path_to_archive):
         commit_details = json.loads(archive.read('metadata.json').decode('utf-8'))
         workdir = mkdtemp(dir=os.path.dirname(path_to_archive))
         archive.extractall(workdir)
-        script_object = read_json(os.path.join(workdir, 'script', commit_details['name']))
-        print(script_object)
-        # engine = sqlite_engine.__new__(sqlite_engine.__class__)
-        # engine.script_table_registry = {}
-        # args = {
-        #     'command': 'install',
-        #     'dataset': script_object,
-        #     'file':'new_file.db',
-        #     'table_name': '{db}_{table}',
-        #     'data_dir':'.'
-        # }
-        # engine.opts = args
-        # engine.use_cache = False
-        # script_object.download(engine=engine, debug=True)
+        if commit_details['script_name'].endswith('.json'):
+            script_object = read_json(os.path.join(workdir, 'script', commit_details['script_name'].split('.')[0]))
+        elif commit_details['script_name'].endswith('.py'):
+            spec = util.spec_from_file_location("module.name", os.path.join(workdir, 'script', commit_details['script_name']))
+            foo = util.module_from_spec(spec)
+            spec.loader.exec_module(foo)
+            script_object = foo.SCRIPT
 
+        engine = sqlite_engine.__new__(sqlite_engine.__class__)
+        engine.script_table_registry = {}
+        args = {
+            'command': 'install',
+            'dataset': script_object,
+            'file': 'new_file.db',
+            'table_name': '{db}_{table}',
+            'data_dir': '.'
+        }
+        engine.opts = args
+        engine.use_cache = False
+        script_object.download(engine=engine, debug=True)
 
 
 if __name__ == '__main__':
-    install_committed('/home/apoorva/Desktop/gdp-0048bc8')
+    install_committed('/home/apoorva/Desktop/aquatic-animal-excretion-25f601d.zip')
     # for dataset in datasets():
-    #     if dataset.name == 'gdp':
+    #     if dataset.name == 'aquatic-animal-excretion':
     #         print(commit_info(dataset))
     #         print(commit(dataset, path='/home/apoorva/Desktop', force_download=True, quiet=False))
