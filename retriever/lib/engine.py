@@ -58,6 +58,7 @@ class Engine(object):
     use_cache = True
     warnings = []
     script_table_registry = OrderedDict()
+    zipped_data_path = None
 
     def connect(self, force_reconnect=False):
         """Create a connection."""
@@ -650,11 +651,15 @@ class Engine(object):
 
     def find_file(self, filename):
         """Check for an existing datafile."""
-        for search_path in DATA_SEARCH_PATHS:
-            search_path = search_path.format(dataset=self.script.name) if self.script else search_path
-            file_path = os.path.normpath(os.path.join(search_path, filename))
+        if self.zipped_data_path:
+            file_path = os.path.normpath(os.path.join(self.zipped_data_path, self.script.name, filename))
             if file_exists(file_path):
                 return file_path
+        for search_path in DATA_SEARCH_PATHS:
+                search_path = search_path.format(dataset=self.script.name) if self.script else search_path
+                file_path = os.path.normpath(os.path.join(search_path, filename))
+                if file_exists(file_path):
+                    return file_path
         return False
 
     def format_data_dir(self):

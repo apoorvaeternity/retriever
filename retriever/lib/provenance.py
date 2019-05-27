@@ -2,19 +2,17 @@ import json
 import os
 import subprocess
 import sys
+from collections import OrderedDict
 from datetime import datetime, timezone
 from importlib import util
+from shutil import rmtree
 from tempfile import NamedTemporaryFile, mkdtemp
 from zipfile import ZipFile
 
-from retriever import datasets
 from retriever.engines import choose_engine
 from retriever.lib.defaults import HOME_DIR, VERSION
 from retriever.lib.engine_tools import getmd5
 from retriever.lib.load_json import read_json
-from retriever.engines import engine_list
-
-sqlite_engine = [eng for eng in engine_list if eng.name == 'SQLite'][0]
 
 
 def package_details():
@@ -93,36 +91,52 @@ def commit(dataset, path=None, force_download=False, quiet=False):
                   "To commit the dataset either download it or enable force download.")
 
 
-def install_committed(path_to_archive):
-    with ZipFile(path_to_archive, 'r') as archive:
-        commit_details = json.loads(archive.read('metadata.json').decode('utf-8'))
-        workdir = mkdtemp(dir=os.path.dirname(path_to_archive))
-        archive.extractall(workdir)
-        if commit_details['script_name'].endswith('.json'):
-            script_object = read_json(os.path.join(workdir, 'script', commit_details['script_name'].split('.')[0]))
-        elif commit_details['script_name'].endswith('.py'):
-            spec = util.spec_from_file_location("module.name", os.path.join(workdir, 'script', commit_details['script_name']))
-            foo = util.module_from_spec(spec)
-            spec.loader.exec_module(foo)
-            script_object = foo.SCRIPT
+def get_script(path_to_archive):
+    """
+    Reads script from archive.
+    """
+    with ZipFile(os.path.normpath(path_to_archive), 'r') as archive:
+        try:
+            commit_details = json.loads(archive.read('metadata.json').decode('utf-8'))
+            workdir = mkdtemp(dir=os.path.dirname(path_to_archive))
+            archive.extract(os.path.join('script', commit_details['script_name']), workdir)
+            if commit_details['script_name'].endswith('.json'):
+                script_object = read_json(os.path.join(workdir, 'script', commit_details['script_name'].split('.')[0]))
+            elif commit_details['script_name'].endswith('.py'):
+                spec = util.spec_from_file_location("script_module",
+                                                    os.path.join(workdir, 'script', commit_details['script_name']))
+                script_module = util.module_from_spec(spec)
+                spec.loader.exec_module(script_module)
+                script_object = script_module.SCRIPT
+            rmtree(workdir)
+        except Exception:
+            raise
+        return script_object
 
-        engine = sqlite_engine.__new__(sqlite_engine.__class__)
-        engine.script_table_registry = {}
-        args = {
-            'command': 'install',
-            'dataset': script_object,
-            'file': 'new_file.db',
-            'table_name': '{db}_{table}',
-            'data_dir': '.'
-        }
-        engine.opts = args
-        engine.use_cache = False
-        script_object.download(engine=engine, debug=True)
+
+def install_committed(path_to_archive, engine):
+    with ZipFile(os.path.normpath(path_to_archive), 'r') as archive:
+        try:
+            workdir = mkdtemp(dir=os.path.dirname(path_to_archive))
+            engine.zipped_data_path = os.path.join(workdir)
+            archive.extractall(workdir)
+            script_object = get_script(path_to_archive)
+            engine.script_table_registry = OrderedDict()
+            script_object.download(engine)
+            script_object.engine.final_cleanup()
+        except Exception:
+            raise
+        finally:
+            rmtree(workdir)
 
 
 if __name__ == '__main__':
-    install_committed('/home/apoorva/Desktop/aquatic-animal-excretion-25f601d.zip')
-    # for dataset in datasets():
-    #     if dataset.name == 'aquatic-animal-excretion':
-    #         print(commit_info(dataset))
-    #         print(commit(dataset, path='/home/apoorva/Desktop', force_download=True, quiet=False))
+    from retriever import install_csv
+
+  #  install_csv('/home/apoorva/Desktop/gdp.zip')
+# install_committed('/home/apoorva/Desktop/aquatic-animal-excretion-25f601d.zip')
+    from retriever import datasets
+    for dataset in datasets():
+        if dataset.name == 'airports':
+            print(commit_info(dataset))
+            print(commit(dataset, path='/home/apoorva/Desktop', force_download=True, quiet=False))
