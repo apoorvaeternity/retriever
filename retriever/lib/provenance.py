@@ -72,7 +72,7 @@ def commit(dataset, commit_message='', path='.', quiet=False):
                              os.path.join('script', os.path.basename(paths_to_zip['script'])))
 
                 for data_file in paths_to_zip['raw_data']:
-                    zipped.write(data_file, data_file.split(raw_dir)[1])
+                    zipped.write(data_file, data_file.replace(raw_dir, ""))
 
                 metadata_temp_file = NamedTemporaryFile()
                 with open(os.path.abspath(metadata_temp_file.name), 'w') as json_file:
