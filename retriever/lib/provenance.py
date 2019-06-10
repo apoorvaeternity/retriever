@@ -65,9 +65,11 @@ def commit(dataset, commit_message='', path='.', quiet=False):
             info['script_name'] = os.path.basename(dataset._file)
 
             if os.path.exists(os.path.join(HOME_DIR, 'raw_data', dataset.name)):
-                info['md5'] = getmd5(os.path.join(HOME_DIR, 'raw_data', dataset.name), 'dir', encoding=ENCODING)
-            with ZipFile(os.path.join(path, '{}-{}.zip'.format(dataset.name,
-                                                               info['md5'][:7])), 'w') as zipped:
+                info['md5_dataset'] = getmd5(os.path.join(HOME_DIR, 'raw_data', dataset.name), 'dir', encoding=ENCODING)
+            info['md5_script'] = getmd5(dataset._file)
+            with ZipFile(os.path.join(path, '{}-{}{}.zip'.format(dataset.name,
+                                                                 info['md5_dataset'][:3],
+                                                                 info['md5_script'][:3])), 'w') as zipped:
                 zipped.write(paths_to_zip['script'],
                              os.path.join('script', os.path.basename(paths_to_zip['script'])))
 
@@ -89,4 +91,4 @@ def commit(dataset, commit_message='', path='.', quiet=False):
 if __name__ == '__main__':
     for dataset in datasets():
         if dataset.name == 'aquatic-animal-excretion':
-            commit(dataset, path='/home/apoorva/Desktop/')
+            commit(dataset, commit_message='Checking commit', path='/home/apoorva/Desktop/')
