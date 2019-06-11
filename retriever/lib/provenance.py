@@ -1,25 +1,21 @@
 import json
 import os
-import subprocess
-import sys
+import pkg_resources
 from datetime import datetime, timezone
-from tempfile import NamedTemporaryFile
 from zipfile import ZipFile
 
 from retriever import datasets
 from retriever.engines import choose_engine
-from retriever.lib.defaults import HOME_DIR, VERSION, ENCODING
+from retriever.lib.defaults import HOME_DIR, ENCODING
 from retriever.lib.engine_tools import getmd5
 
 
 def package_details():
-    details = {'retriever': VERSION[1:]}
-    packages = subprocess.check_output([sys.executable, '-m', 'pip',
-                                        'freeze', '--exclude-editable']).decode("utf-8").split('\n')
+    details = {}
+    packages = pkg_resources.working_set
     for package in packages:
-        if package:
-            package_name, version = package.split('==')
-            details[package_name] = version
+        package_name, version = str(package).split(' ')
+        details[package_name] = version
     return details
 
 
@@ -37,7 +33,7 @@ def commit(dataset, commit_message='', path='.', quiet=False):
     """
     Commit dataset to a zipped file.
     """
-    if type(dataset) == str:
+    if isinstance(dataset, str):
         # if dataset is not a dataset script object find the right script
         dataset = [script for script in datasets() if script.name == dataset][0]
     paths_to_zip = {'script': dataset._file,
@@ -66,7 +62,7 @@ def commit(dataset, commit_message='', path='.', quiet=False):
 
             if os.path.exists(os.path.join(HOME_DIR, 'raw_data', dataset.name)):
                 info['md5_dataset'] = getmd5(os.path.join(HOME_DIR, 'raw_data', dataset.name), 'dir', encoding=ENCODING)
-            info['md5_script'] = getmd5(dataset._file)
+            info['md5_script'] = getmd5(dataset._file, data_type='file', encoding=ENCODING)
             with ZipFile(os.path.join(path, '{}-{}{}.zip'.format(dataset.name,
                                                                  info['md5_dataset'][:3],
                                                                  info['md5_script'][:3])), 'w') as zipped:
@@ -75,20 +71,13 @@ def commit(dataset, commit_message='', path='.', quiet=False):
 
                 for data_file in paths_to_zip['raw_data']:
                     zipped.write(data_file, data_file.replace(raw_dir, ""))
-
-                metadata_temp_file = NamedTemporaryFile()
-                with open(os.path.abspath(metadata_temp_file.name), 'w') as json_file:
+                with open('metadata.json', 'w') as json_file:
                     json.dump(info, json_file, sort_keys=True, indent=4)
-                zipped.write(os.path.abspath(metadata_temp_file.name), 'metadata.json')
-                metadata_temp_file.close()
+                zipped.write(os.path.abspath(json_file.name), 'metadata.json')
+                os.remove('metadata.json')
         if not quiet:
             print("Successfully committed.")
     except Exception as e:
+        print(e)
         print("Dataset could not be committed.")
-        raise (e)
-
-
-if __name__ == '__main__':
-    for dataset in datasets():
-        if dataset.name == 'aquatic-animal-excretion':
-            commit(dataset, commit_message='Checking commit', path='/home/apoorva/Desktop/')
+        return
