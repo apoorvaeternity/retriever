@@ -1,4 +1,5 @@
 import os
+import pytest
 from shutil import rmtree
 from tempfile import mkdtemp
 
@@ -7,14 +8,12 @@ from retriever.lib.load_json import read_json
 from retriever.lib.provenance import commit
 
 file_location = os.path.normpath(os.path.dirname(os.path.realpath(__file__)))
-modified_dataset_path = "https://github.com/apoorvaeternity/sample-dataset/raw/master/modified/Portal_rodents_19772002.csv"
 mysql_engine, postgres_engine, sqlite_engine, msaccess_engine, \
 csv_engine, download_engine, json_engine, xml_engine = engine_list
 
-# Note: The hash in the archive name is the concatenation of first 3 characters of md5 value of
-# raw data and that of the script file
-original_archive = 'sample-dataset-3960d3.zip'  # the archive file with original version of dataset
-modified_archive = 'sample-dataset-a690d3.zip'  # the archive file with modified version of dataset
+test_commit_details = [('sample_dataset', {
+    'main': 'https://github.com/apoorvaeternity/sample-dataset/raw/master/modified/Portal_rodents_19772002.csv'},
+                        {'original': 'sample-dataset-3960d3.zip', 'modified': 'sample-dataset-a690d3.zip'})]
 
 
 def get_script_module(script_name):
@@ -22,10 +21,10 @@ def get_script_module(script_name):
     return read_json(os.path.join(file_location, script_name))
 
 
-def install_and_commit(script_module, test_dir, commit_message, modified_url=None):
-    if modified_url:
+def install_and_commit(script_module, test_dir, commit_message, modified_table_urls={}):
+    for table in modified_table_urls:
         # modify the url to the csv file
-        setattr(script_module.tables['main'], 'url', modified_dataset_path)
+        setattr(script_module.tables[table], 'url', modified_table_urls[table])
     sqlite_engine.opts = {'install': 'sqlite', 'file': 'test_db.sqlite3', 'table_name': '{db}_{table}',
                           'data_dir': '.'}
     sqlite_engine.use_cache = False
@@ -35,22 +34,24 @@ def install_and_commit(script_module, test_dir, commit_message, modified_url=Non
     commit(script_module, path=test_dir, commit_message=commit_message)
 
 
-def test_commit():
+@pytest.mark.parametrize("script_file_name, modified_table_urls, expected_archives", test_commit_details)
+def test_commit(script_file_name, modified_table_urls, expected_archives):
     test_dir = mkdtemp(dir=os.path.dirname(os.path.realpath(__file__)))
     os.chdir(test_dir)
-    script_module = get_script_module(os.path.join('raw_data/scripts/', 'sample_dataset'))
-    setattr(script_module, "_file", os.path.join(file_location, 'raw_data/scripts/sample_dataset.json'))
-    setattr(script_module, "_name", 'sample_dataset')
+    script_module = get_script_module(os.path.join('raw_data/scripts/', script_file_name))
+    setattr(script_module, "_file",
+            os.path.join(file_location, 'raw_data/scripts/', '{}.json'.format(script_file_name)))
+    setattr(script_module, "_name", script_file_name.replace('_', '-'))
     # install original version
     install_and_commit(script_module, test_dir=test_dir, commit_message="Original")
     # install modified version
     install_and_commit(script_module, test_dir=test_dir, commit_message="Modified",
-                   modified_url=modified_dataset_path)
+                       modified_table_urls=modified_table_urls)
     # check if the required archive files exist
     original_archive_exist = True if os.path.isfile(
-        os.path.join(test_dir, original_archive)) else False
+        os.path.join(test_dir, expected_archives['original'])) else False
     modified_archive_exist = True if os.path.isfile(
-        os.path.join(test_dir, modified_archive)) else False
+        os.path.join(test_dir, expected_archives['modified'])) else False
     os.chdir(file_location)
     rmtree(test_dir)
 
