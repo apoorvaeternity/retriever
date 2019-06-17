@@ -75,7 +75,7 @@ def test_commit(script_file_name, modified_table_urls, expected_archives):
         commit_message="Modified",
         modified_table_urls=modified_table_urls,
     )
-    os.listdir(test_dir)
+    print(os.listdir(test_dir))
     # check if the required archive files exist
     original_archive_exist = (
         True
@@ -87,7 +87,7 @@ def test_commit(script_file_name, modified_table_urls, expected_archives):
         if os.path.isfile(os.path.join(test_dir, expected_archives["modified"]))
         else False
     )
-    os.chdir(file_location)
+    print(os.chdir(file_location))
     rmtree(test_dir)
 
     assert original_archive_exist == True
