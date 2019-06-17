@@ -67,6 +67,7 @@ def test_commit(script_file_name, modified_table_urls, expected_archives):
     setattr(script_module, "_name", script_file_name.replace("_", "-"))
     # install original version
     install_and_commit(script_module, test_dir=test_dir, commit_message="Original")
+    os.listdir(test_dir)
     # install modified version
     install_and_commit(
         script_module,
@@ -74,6 +75,7 @@ def test_commit(script_file_name, modified_table_urls, expected_archives):
         commit_message="Modified",
         modified_table_urls=modified_table_urls,
     )
+    os.listdir(test_dir)
     # check if the required archive files exist
     original_archive_exist = (
         True
