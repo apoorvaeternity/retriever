@@ -67,7 +67,7 @@ def test_commit(script_file_name, modified_table_urls, expected_archives):
     setattr(script_module, "_name", script_file_name.replace("_", "-"))
     # install original version
     install_and_commit(script_module, test_dir=test_dir, commit_message="Original")
-    os.listdir(test_dir)
+    print(os.listdir(test_dir))
     # install modified version
     install_and_commit(
         script_module,
@@ -87,7 +87,7 @@ def test_commit(script_file_name, modified_table_urls, expected_archives):
         if os.path.isfile(os.path.join(test_dir, expected_archives["modified"]))
         else False
     )
-    print(os.chdir(file_location))
+    os.chdir(file_location)
     rmtree(test_dir)
 
     assert original_archive_exist == True
