@@ -11,9 +11,9 @@ file_location = os.path.normpath(os.path.dirname(os.path.realpath(__file__)))
 mysql_engine, postgres_engine, sqlite_engine, msaccess_engine, \
 csv_engine, download_engine, json_engine, xml_engine = engine_list
 
-test_commit_details = [('sample_dataset', {
-    'main': 'https://github.com/apoorvaeternity/sample-dataset/raw/master/modified/Portal_rodents_19772002.csv'},
-                        {'original': 'sample-dataset-3960d3.zip', 'modified': 'sample-dataset-a690d3.zip'})]
+test_commit_details = [('dataset_provenance', {
+    'main': 'https://github.com/apoorvaeternity/sample-dataset/raw/master/modified/dataset_provenance.csv'},
+                        {'original': 'dataset-provenance-396e22.zip', 'modified': 'dataset-provenance-a69e22.zip'})]
 
 
 def get_script_module(script_name):

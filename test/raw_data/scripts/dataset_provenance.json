@@ -19,7 +19,7 @@
                 ],
                 "contains_pk":"True"
             },
-            "url":"https://github.com/apoorvaeternity/sample-dataset/raw/master/original/Portal_rodents_19772002.csv",
+            "url":"https://github.com/apoorvaeternity/sample-dataset/raw/master/original/dataset_provenance.csv",
             "name":"main",
             "schema":{
                 "fields":[
@@ -167,5 +167,5 @@
     "scan_lines":"40000",
     "homepage":"https://figshare.com/articles/Data_Paper_Data_Paper/3531317",
     "description":"The data set represents a Desert ecosystems using the composition and abundances of ants, plants, and rodents has occurred continuously on 24 plots. Currently includes only mammal data.",
-    "name":"sample-dataset"
+    "name":"dataset-provenance"
 }
