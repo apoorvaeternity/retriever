@@ -99,7 +99,7 @@ def get_metadata(path_to_archive):
     "Returns a dictionary after reading metadata.json file of a committed dataset"
     with ZipFile(os.path.normpath(path_to_archive), 'r') as archive:
         try:
-            metadata = json.loads(archive.read('metadata.json').decode('utf-8'))
+            metadata = json.loads(archive.read('metadata.json')
         except Exception as e:
             print(e)
             return
